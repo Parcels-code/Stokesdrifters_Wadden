@@ -32,6 +32,7 @@ drifterinfo = {
     '300434068076480': (24, 'Ciaran', '2023-11-14 13:50:25',4,57.010,53,06.728),
 }
 
+print(f"Number of files: {len(filenames)}")
 df = pd.concat((pd.read_csv(f) for f in filenames), ignore_index=True)
 print('Done loading csv files')
 
@@ -57,8 +58,8 @@ for detailed in [0, 1]:
         dfi = df[df['Name'] == name][vars[detailed]]
         dfi = dfi[dfi['Data Date(GMT)'] > drifterinfo[i][2]]
         if detailed == 0:  # remove points with sudden large change in lon/lat for website version only
-            dfi = dfi[abs(dfi['LATITUDE'].diff()) < 0.1]
-            dfi = dfi[abs(dfi['LATITUDE'].diff()) < 0.1]
+            dfi = dfi[abs(dfi['LATITUDE'].diff()) < 0.05]
+            dfi = dfi[abs(dfi['LONGITUDE'].diff()) < 0.05]
         waddendata[name] = list(dfi.itertuples(index=False, name=None))
         if detailed == 1:
             print(name, len(waddendata[name]))
