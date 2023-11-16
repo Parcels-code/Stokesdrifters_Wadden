@@ -56,6 +56,9 @@ for detailed in [0, 1]:
         name = drifterinfo[i][1]
         dfi = df[df['Name'] == name][vars[detailed]]
         dfi = dfi[dfi['Data Date(GMT)'] > drifterinfo[i][2]]
+        if detailed == 0:  # remove points with sudden large change in lon/lat for website version only
+            dfi = dfi[abs(dfi['LATITUDE'].diff()) < 0.1]
+            dfi = dfi[abs(dfi['LATITUDE'].diff()) < 0.1]
         waddendata[name] = list(dfi.itertuples(index=False, name=None))
         if detailed == 1:
             print(name, len(waddendata[name]))
