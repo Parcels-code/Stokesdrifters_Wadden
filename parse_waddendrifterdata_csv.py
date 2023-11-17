@@ -2,7 +2,7 @@ from glob import glob
 import pandas as pd
 import json
 
-directory = '202*'
+directory = '/science/wwwprojects/plasticadrift/www/galapagosdrifters/202*'
 filenames = sorted(glob(directory + '/*.csv'))
 
 drifterinfo = {
@@ -50,7 +50,8 @@ df.sort_values(by=['Name', 'Data Date(GMT)'], inplace=True)
 
 vars = [['Data Date(GMT)', 'LATITUDE', 'LONGITUDE'],
         ['Data Date(GMT)', 'LATITUDE', 'LONGITUDE', 'Orientation', 'Voltage', 'FixValid', 'TimetoFix', 'FixTime', 'SST']]
-fnames = ['waddendrifters.json', 'waddendrifters_detailed.json']
+fnames = ['/science/wwwprojects/plasticadrift/www/galapagosdrifters/waddendrifters.json',
+          '/science/wwwprojects/plasticadrift/www/galapagosdrifters/waddendrifters_detailed.json']
 for detailed in [0, 1]:
     waddendata = {}
     for i in dict(sorted(drifterinfo.items(), key=lambda item: item[1][2])):
@@ -61,6 +62,13 @@ for detailed in [0, 1]:
             dfi = dfi[abs(dfi['LATITUDE'].diff()) < 0.05]
             dfi = dfi[abs(dfi['LONGITUDE'].diff()) < 0.05]
         waddendata[name] = list(dfi.itertuples(index=False, name=None))
+        if len(waddendata[name]) > 0:
+            if detailed == 0:
+                waddendata[name].insert(0, (drifterinfo[i][2], round(drifterinfo[i][5]+drifterinfo[i][6]/60,5), round(drifterinfo[i][3]+drifterinfo[i][4]/60,5)))
+            if detailed == 1:
+                waddendata[name].insert(0, (drifterinfo[i][2], round(drifterinfo[i][5]+drifterinfo[i][6]/60,5), round(drifterinfo[i][3]+drifterinfo[i][4]/60,5),
+                                            waddendata[name][0][3], waddendata[name][0][4], waddendata[name][0][5], waddendata[name][0][6], waddendata[name][0][7], waddendata[name][0][8]))
+
         if detailed == 1:
             print(name, len(waddendata[name]))
 
