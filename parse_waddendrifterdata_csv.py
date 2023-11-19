@@ -2,9 +2,6 @@ from glob import glob
 import pandas as pd
 import json
 
-directory = '/science/wwwprojects/plasticadrift/www/galapagosdrifters/202*'
-filenames = sorted(glob(directory + '/*.csv'))
-
 drifterinfo = {
     '300434068072450': (1, 'Orka', '2023-11-14 10:21:12',4,55.507,52,56.821),
     '300434068077530': (2, 'Bultrug', '2023-11-14 10:21:36',4,55.526,52,56.808),
@@ -19,7 +16,7 @@ drifterinfo = {
     '300434068070510': (11, 'Pizza Quatro Formagio', '2023-11-14 12:58:17',4,57.188,53,01.140),
     '300434069405400': (12, 'Pizza Napolitana', '2023-11-14 12:59:50',4,57.181,53,01.153),
     '300434069605630': (13, 'Pizza Verdura', '2023-11-14 10:27:27',4,55.738,52,56.820),
-    '300434066486520': (14, 'Pizza Vegetariana', '2023-11-14 10:27:44',4,55.710,52,56.821),
+    '300434066486520': (14, 'Pizza Vegetariana', '2023-11-14 10:27:44',4,55.710,52,56.821, '2023-11-17 12:30:00'),
     '300434069402400': (15, 'Pizza Calzone', '2023-11-14 10:28:29',4,55.723,52,56.814),
     '300434068075440': (16, 'Pizza Quatro Stagione', '2023-11-14 13:53:51',4,56.782,53,06.723),
     '300434068073450': (17, 'Pizza Caprese', '2023-11-14 13:03:00',4,57.275,53,01.255),
@@ -32,11 +29,29 @@ drifterinfo = {
     '300434068076480': (24, 'Ciaran', '2023-11-14 13:50:25',4,57.010,53,06.728),
 }
 
-print(f"Number of files: {len(filenames)}")
-df = pd.concat((pd.read_csv(f) for f in filenames), ignore_index=True)
-print('Done loading csv files')
+directory = '/science/wwwprojects/plasticadrift/www/galapagosdrifters'
+dirnames = sorted(glob(f"{directory}/202*"))
+filenames = []
+for dir in dirnames:
+    date = dir[-10:]
+    merged_files = sorted(glob(f"{directory}/daily_merged/*{date}.csv"))
+    if len(merged_files) > 0:
+        filenames.extend(merged_files)
+    else:
+        filenames.extend(sorted(glob(dir + '/*.csv')))
 
-df['Name'] = [drifterinfo[f.split('/')[-1].split('_')[0]][1] for f in filenames]
+print(f"Number of files: {len(filenames)}")
+
+all_dfs = []
+imeis = []
+for f in filenames:
+    df = pd.read_csv(f)
+    all_dfs.append(df)
+    imei = f.split('/')[-1].split('_')[0]
+    imeis.extend([imei for _ in range(len(df.index))])
+
+df = pd.concat(all_dfs, ignore_index=True)
+df['Name'] = [drifterinfo[imei][1] for imei in imeis]
 df['Orientation'] = df['Hex Data'].str.split('orientation=').str[1].str.split(';').str[0].astype(int)
 df['Voltage'] = df['Hex Data'].str.split('voltage=').str[1].str.split(';').str[0].astype(float)
 df['FixValid'] = df['Hex Data'].str.split('fixValid=').str[1].str.split(';').str[0].astype(bool)
@@ -46,12 +61,14 @@ df['SST'] = df['Hex Data'].str.split('temperature=').str[1].astype(float)
 
 df = df[df['LONGITUDE'] < 175]  # Removing Outliers
 
+print('Done loading csv files')
+
 df.sort_values(by=['Name', 'Data Date(GMT)'], inplace=True)
 
 vars = [['Data Date(GMT)', 'LATITUDE', 'LONGITUDE'],
         ['Data Date(GMT)', 'LATITUDE', 'LONGITUDE', 'Orientation', 'Voltage', 'FixValid', 'TimetoFix', 'FixTime', 'SST']]
 fnames = ['/science/wwwprojects/plasticadrift/www/galapagosdrifters/waddendrifters.json',
-          '/science/wwwprojects/plasticadrift/www/galapagosdrifters/waddendrifters_detailed.json']
+         '/science/wwwprojects/plasticadrift/www/galapagosdrifters/waddendrifters_detailed.json']
 for detailed in [0, 1]:
     waddendata = {}
     for i in dict(sorted(drifterinfo.items(), key=lambda item: item[1][2])):
@@ -61,6 +78,8 @@ for detailed in [0, 1]:
         if detailed == 0:  # remove points with sudden large change in lon/lat for website version only
             dfi = dfi[abs(dfi['LATITUDE'].diff()) < 0.05]
             dfi = dfi[abs(dfi['LONGITUDE'].diff()) < 0.05]
+            if len(drifterinfo[i]) > 7:  # remove points after confirmed pick-up (for pivacy)
+                dfi = dfi[dfi['Data Date(GMT)'] < drifterinfo[i][7]]
         waddendata[name] = list(dfi.itertuples(index=False, name=None))
         if len(waddendata[name]) > 0:
             if detailed == 0:
